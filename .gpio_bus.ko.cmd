@@ -1,1 +1,0 @@
-savedcmd_/home/orhun/kernel_module/gpio_bus.ko := aarch64-linux-gnu-ld -r -EL  -maarch64elf -z noexecstack --no-warn-rwx-segments --build-id=sha1  -T arch/arm64/module.lds -o /home/orhun/kernel_module/gpio_bus.ko /home/orhun/kernel_module/gpio_bus.o /home/orhun/kernel_module/gpio_bus.mod.o /home/orhun/kernel_module/.module-common.o
