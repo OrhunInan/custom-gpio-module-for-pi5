@@ -42,6 +42,31 @@ static int gpio_bus_open(struct inode *inode, struct file *file)
     return 0;
 }
 
+static ssize_t gpio_bus_read(struct file *file, char __user *user_buffer, size_t count, loff_t *pos) 
+{
+    struct gpio_bus *bus_ptr = file->private_data;
+    char kbuf[16];
+    int len;
+
+    if (*pos > 0) {
+        return 0; 
+    }
+
+    len = snprintf(kbuf, sizeof(kbuf), "%d\n", bus_ptr->current_value);
+
+    if (count < len) {
+        len = count;
+    }
+
+    if (copy_to_user(user_buffer, kbuf, len)) {
+        return -EFAULT;
+    }
+
+    *pos += len;
+
+    return len; 
+}
+
 static int gpio_bus_release(struct inode *inode, struct file *file) 
 {
     return 0;
@@ -87,7 +112,7 @@ static ssize_t gpio_bus_write(struct file *file, const char __user *user_buffer,
 
 static struct file_operations fops = {
     .owner = THIS_MODULE,
-    // .read    = device_read,
+    .read    = gpio_bus_read,
     .write   = gpio_bus_write,
     .open    = gpio_bus_open,
     .release = gpio_bus_release,
