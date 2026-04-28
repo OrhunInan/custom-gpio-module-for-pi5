@@ -26,7 +26,7 @@ Build the Kernel Object (`.ko`) using the provided Makefile:
 make
 ```
 
-##Loading the Module (The RP1 Offset)
+## Loading the Module (The RP1 Offset)
 On the Raspberry Pi 5, GPIO pins are managed by the RP1 chip, which is dynamically assigned a block of pins by the kernel at boot. Raw physical pin numbers (e.g., 5) cannot be used directly. The RP1 base offset must be added.
 
 1. Find the RP1 Base Offset:
@@ -44,7 +44,7 @@ sudo insmod gpio_bus.ko bus_pins=574,575,581,582
 ```
 (If no pins are provided, it safely falls back to the default macro array).
 
-##Security & Permissions (udev Rule)
+## Security & Permissions (udev Rule)
 This driver relies on udev to manage access policies. By default, the node is created as root-only. To allow a background service or specific user to control the bus securely:
 
 1. Create a dedicated hardware group:
@@ -66,7 +66,7 @@ sudo udevadm control --reload-rules
 ```
 Re-insert the module, and /dev/gpio_bus will automatically mount with 0660 permissions owned by the custom group.
 
-##Usage
+## Usage
 Once loaded, interface with the hardware directly from the terminal or background scripts.
 
 Write to the bus:
@@ -81,13 +81,13 @@ Read the current state:
 cat /dev/gpio_bus
 ```
 
-##Unloading the Driver
+## Unloading the Driver
 The teardown sequence safely zeroes out all physical pins, releases the hardware locks, destroys the sysfs class, and removes the VFS node before exiting.
 ```bash
 sudo rmmod gpio_bus
 ```
 
-##Author
+## Author
 **Orhun İnan** - Computer Engineering Student, Hacettepe University
 
 License: GPL
