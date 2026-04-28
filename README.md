@@ -33,7 +33,7 @@ On the Raspberry Pi 5, GPIO pins are managed by the RP1 chip, which is dynamical
 ```bash
 sudo cat /sys/kernel/debug/gpio | grep "pinctrl-rp1" -B 1
 ```
-(Look for the first number, e.g., 569-622. The base is 569.)
+    (Look for the first number, e.g., 569-622. The base is 569.)
 
 2. Calculate target pins:
 To use physical pins 5, 6, 12, and 13, add the base offset to each (e.g., 569 + 5 = 574).
@@ -64,7 +64,7 @@ KERNEL=="gpio_bus", SUBSYSTEM=="gpio_bus_class", MODE="0660", GROUP="gpio_bus_gr
 ```bash
 sudo udevadm control --reload-rules
 ```
-Re-insert the module, and /dev/gpio_bus will automatically mount with 0660 permissions owned by the custom group.
+    Re-insert the module, and /dev/gpio_bus will automatically mount with 0660 permissions owned by the custom group.
 
 ## Usage
 Once loaded, interface with the hardware directly from the terminal or background scripts.
