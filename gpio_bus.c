@@ -9,16 +9,17 @@
 #include <linux/cdev.h> 
 #include <linux/uaccess.h>
 
-#define BUS_LENGTH 4
+#define BUS_LENGTH 4 // Defined default pin length as macro in case of future change 
+#define DEFAULT_BUS_PINS {5, 6, 12, 13} // Defined default bus pins as macro in case of future change 
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Orhun İnan");
 MODULE_DESCRIPTION("4-bit parallel GPIO bus driver");
 
 static int pin_count = 0;
-static int bus_pins[BUS_LENGTH] = {5, 6, 12, 13};
+static int bus_pins[BUS_LENGTH] = DEFAULT_BUS_PINS;
 module_param_array(bus_pins, int, &pin_count, 0000);
-MODULE_PARM_DESC(bus_pins, "An array of GPIO pins in use for bus connection.");
+MODULE_PARM_DESC(bus_pins, "Array of GPIO pins in use for bus connection.");
 
 struct gpio_bus {
     struct cdev cdev;                 
@@ -48,12 +49,14 @@ static ssize_t gpio_bus_read(struct file *file, char __user *user_buffer, size_t
     char kbuf[16];
     int len;
 
+    // Make sure user can only read once per open function
     if (*pos > 0) {
         return 0; 
     }
 
     len = snprintf(kbuf, sizeof(kbuf), "%d\n", bus_ptr->current_value);
 
+    // Set string length as count
     if (count < len) {
         len = count;
     }
@@ -83,22 +86,23 @@ static ssize_t gpio_bus_write(struct file *file, const char __user *user_buffer,
 
     bytes_to_copy = min(count, sizeof(kbuf) - 1);
 
+    // Copy input from userspace
     if (copy_from_user(kbuf, user_buffer, bytes_to_copy)) {
         return -EFAULT;
     }
 
+    // Enforce integer input type
     if (kstrtol(kbuf, 10, &user_value) < 0) {
         printk(KERN_ERR "GPIO_bus: Invalid data written\n");
         return -EINVAL;
     }
 
-    if (user_value < 0 || user_value > 9) {
-        printk(KERN_WARNING "GPIO_bus: Value %ld out of bounds (0-9 only)\n", user_value);
-        return -EINVAL;
-    }
+    // Only take the first 4 bits of data
+    user_value = user_value & 0xF;
 
     bus_ptr->current_value = user_value;
 
+    // Write to GPIO pins
     for (i = 0; i < BUS_LENGTH; i++) {
         int bit_state = (user_value >> i) & 1; 
         
@@ -123,17 +127,20 @@ static int __init gpio_bus_init(void)
     int ret;
     int i, j;
 
+    // Enforce pin_count == BUS_LENGTH
     if (pin_count != 0 && pin_count != BUS_LENGTH) {
         printk(KERN_ERR "GPIO_bus: Wrong pin count %d pins required\n", BUS_LENGTH);
         return -EINVAL;
     }    
 
+    // Create char device 
     ret = alloc_chrdev_region(&bus_dev_num, 0, 1, "GPIO_bus");
     if (ret < 0) {
         printk(KERN_ERR "Failed to allocate device numbers\n");
         return ret;
     }    
 
+    // Initialize VFS
     cdev_init(&gpio_bus_dev.cdev, &fops);
     gpio_bus_dev.cdev.owner = THIS_MODULE;
     ret = cdev_add(&gpio_bus_dev.cdev, bus_dev_num, 1);
@@ -143,6 +150,7 @@ static int __init gpio_bus_init(void)
         return ret;
     }    
 
+    // Broadcast to udev
     gpio_bus_class = class_create("gpio_bus_class");
     if (IS_ERR(gpio_bus_class)) {
         cdev_del(&gpio_bus_dev.cdev);
@@ -151,6 +159,7 @@ static int __init gpio_bus_init(void)
         return PTR_ERR(gpio_bus_class);
     }
 
+    // Create /dev/gpio_bus
     gpio_bus_device = device_create(gpio_bus_class, NULL, bus_dev_num, NULL, "gpio_bus");
     if (IS_ERR(gpio_bus_device)) {
         class_destroy(gpio_bus_class);
@@ -160,15 +169,21 @@ static int __init gpio_bus_init(void)
         return PTR_ERR(gpio_bus_device);
     }
 
+    // Lock requested GPIO pins and set pins to 0
     for (i = 0; i < BUS_LENGTH; i++) {
         ret = gpio_request(bus_pins[i], "GPIO_bus_pin");
-        if (ret) {
+
+        // If can't lock a pin release all acquired pins and remove VFS
+        if (ret) { 
             printk(KERN_ERR "Failed to request GPIO %d\n", bus_pins[i]);
 
             for (j = 0; j < i; j++) {
                 gpiod_put(gpio_bus_dev.pins[j]);
                 gpio_free(bus_pins[j]);
             }    
+
+            device_destroy(gpio_bus_class, bus_dev_num);
+            class_destroy(gpio_bus_class);
             
             cdev_del(&gpio_bus_dev.cdev);
             unregister_chrdev_region(bus_dev_num, 1);
@@ -187,6 +202,7 @@ static void __exit gpio_bus_exit(void)
 {
     int i;
 
+    //Release all acquired pins
     for (i = 0; i < BUS_LENGTH; i++) {
         gpiod_set_value(gpio_bus_dev.pins[i], 0); 
         gpiod_put(gpio_bus_dev.pins[i]);
@@ -195,9 +211,6 @@ static void __exit gpio_bus_exit(void)
     
     device_destroy(gpio_bus_class, bus_dev_num);
     class_destroy(gpio_bus_class);
-
-    cdev_del(&gpio_bus_dev.cdev);
-    unregister_chrdev_region(bus_dev_num, 1);
 
     cdev_del(&gpio_bus_dev.cdev);
     unregister_chrdev_region(bus_dev_num, 1);
