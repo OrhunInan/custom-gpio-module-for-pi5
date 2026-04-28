@@ -35,14 +35,17 @@ sudo cat /sys/kernel/debug/gpio | grep "pinctrl-rp1" -B 1
 ```
 (Look for the first number, e.g., 569-622. The base is 569.)
 
+
 2. Calculate target pins:
+
 To use physical pins 5, 6, 12, and 13, add the base offset to each (e.g., 569 + 5 = 574).
 
 3. Inject the module:
 ```bash
 sudo insmod gpio_bus.ko bus_pins=574,575,581,582
 ```
-(If no pins are provided, it safely falls back to the default macro array).
+(If no pins are provided, it safely falls back to the default macro array)
+
 
 ## Security & Permissions (udev Rule)
 This driver relies on udev to manage access policies. By default, the node is created as root-only. To allow a background service or specific user to control the bus securely:
@@ -65,6 +68,7 @@ KERNEL=="gpio_bus", SUBSYSTEM=="gpio_bus_class", MODE="0660", GROUP="gpio_bus_gr
 sudo udevadm control --reload-rules
 ```
 Re-insert the module, and /dev/gpio_bus will automatically mount with 0660 permissions owned by the custom group.
+
 
 ## Usage
 Once loaded, interface with the hardware directly from the terminal or background scripts.
