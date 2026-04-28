@@ -10,9 +10,7 @@ While developed as an educational exercise, the driver implements several standa
 * **Dynamic Hardware Binding:** Passes specific GPIO pins at load-time via module parameters without needing to recompile the C code.
 * **VFS Integration:** Reads and writes directly through `/dev/gpio_bus` using standard POSIX commands, bridging kernel space and user space.
 * **Zero-Touch Node Creation:** Leverages Linux `sysfs` and `udev` to automatically create and destroy device nodes, moving away from manual `mknod` commands.
-* **State Caching:** Implements a `.read` operation that safely returns the last written hardware state without polling physical pins and risking an infinite read loop.
-* **Defensive Input Handling:** Uses strict memory boundary checks (`copy_from_user`), string-to-integer sanitization, and bitwise masking (`& 0xF`) to prevent kernel panics from invalid inputs.
-* **Separation of Mechanism and Policy:** Relies on `udev` rules for secure, group-based hardware access rather than hardcoding open (`0666`) permissions in the kernel.
+* **Defensive Input Handling:** Uses strict memory boundary checks (`copy_from_user`) and string-to-integer sanitization to prevent kernel panics from invalid inputs.
 
 ## Prerequisites
 * **Hardware:** Raspberry Pi 5 
